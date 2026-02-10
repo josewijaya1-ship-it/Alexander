@@ -1,5 +1,5 @@
 import streamlit as st
-from langchain_google_genai import ChatGoogleGenerativeAI
+from google. generativeai as genai
 from langchain.prompts import ChatPromptTemplate
 import os
 from dotenv import load_dotenv
