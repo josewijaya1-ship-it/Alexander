@@ -1,55 +1,72 @@
 import streamlit as st
-from google. generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import ChatPromptTemplate
 import os
 from dotenv import load_dotenv
 
-# 1. Mengambil API Key dari file .env atau Environment Variable
+# 1. Load API Key secara aman
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
+# Streamlit Cloud menggunakan st.secrets, lokal menggunakan .env
+api_key = os.getenv("GOOGLE_API_KEY") or st.secrets.get("GOOGLE_API_KEY")
 
-# Konfigurasi Halaman Streamlit
-st.set_page_config(page_title="Universal AI Translator", page_icon="🌐")
+st.set_page_config(page_title="AI Translator Pro", page_icon="🚀", layout="wide")
 
-st.title("🌐 AI Universal Translator")
-st.markdown("Terjemahkan teks apa pun ke berbagai bahasa dengan kekuatan AI.")
+st.title("🚀 AI Universal Translator (Next-Gen)")
+st.write("Menerjemahkan dengan model Gemini terbaru untuk hasil yang lebih natural.")
 
-# Sidebar untuk pengaturan
+# Sidebar Pengaturan
 with st.sidebar:
-    st.header("Pengaturan")
-    # Jika API Key tidak ada di .env, user bisa memasukkannya manual di UI
+    st.header("⚙️ Konfigurasi")
+    
+    # Input API Key manual jika tidak terdeteksi di sistem
     if not api_key:
-        api_key = st.text_input("Masukkan Google API Key:", type="password")
+        api_key = st.text_input("Google API Key:", type="password", help="Dapatkan di Google AI Studio")
+    
+    # Pilihan Model (Menggunakan Gemini 2.0 Flash sebagai standar terbaru)
+    model_choice = st.selectbox(
+        "Pilih Otak AI:",
+        ["gemini-2.0-flash", "gemini-1.5-pro", "gemini-3-flash-preview"]
+    )
     
     target_lang = st.selectbox(
-        "Pilih Bahasa Tujuan:",
-        ["Inggris", "Jepang", "Korea", "Arab", "Prancis", "Jerman", "Mandarin", "Indonesia"]
+        "Bahasa Tujuan:",
+        ["English", "Japanese", "Korean", "Indonesian", "Arabic", "French", "Spanish", "German"]
     )
     
     tone = st.select_slider(
         "Gaya Bahasa:",
-        options=["Sangat Formal", "Formal", "Santai", "Gaul"]
+        options=["Sangat Formal", "Profesional", "Santai", "Bahasa Gaul/Slang"]
     )
 
-# Area Input Teks
-source_text = st.text_area("Masukkan teks yang ingin diterjemahkan:", placeholder="Contoh: Halo, apa kabar hari ini?")
+# UI Kolom Utama
+col1, col2 = st.columns(2)
 
-if st.button("Terjemahkan Sekarang"):
+with col1:
+    source_text = st.text_area("Teks Sumber:", placeholder="Ketik di sini...", height=250)
+
+if st.button("Terjemahkan ✨", use_container_width=True):
     if not api_key:
-        st.error("Waduh, API Key-nya belum ada nih. Masukkan dulu di sidebar ya!")
-    elif source_text.strip() == "":
-        st.warning("Teksnya kosong, apa yang mau diterjemahkan?")
+        st.error("Masukkan API Key terlebih dahulu!")
+    elif not source_text:
+        st.warning("Teks sumber tidak boleh kosong.")
     else:
         try:
-            with st.spinner('Sedang menerjemahkan...'):
-                # Inisialisasi Model AI (Google Gemini)
-                llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=api_key)
+            with st.spinner('AI sedang berpikir...'):
+                # Inisialisasi Model Terbaru
+                llm = ChatGoogleGenerativeAI(
+                    model=model_choice, 
+                    google_api_key=api_key,
+                    temperature=0.3 # Suhu rendah agar hasil terjemahan konsisten
+                )
                 
-                # Membuat Prompt yang dinamis
+                # Prompt yang lebih advanced (System Instruction tersembunyi)
                 template = """
-                Kamu adalah penerjemah profesional yang ahli dalam berbagai bahasa.
-                Tugasmu adalah menerjemahkan teks berikut ke dalam bahasa {bahasa_tujuan}.
-                Gunakan gaya bahasa yang {gaya}.
+                Anda adalah mesin penerjemah AI mutakhir. 
+                Tugas Anda:
+                1. Deteksi bahasa asal secara otomatis.
+                2. Terjemahkan ke dalam bahasa {bahasa_tujuan} dengan sangat akurat.
+                3. Gunakan nada bicara {gaya}.
+                4. Jika ada istilah teknis atau budaya, berikan adaptasi yang paling natural, bukan kaku.
                 
                 Teks: {teks_asal}
                 
@@ -59,20 +76,19 @@ if st.button("Terjemahkan Sekarang"):
                 prompt = ChatPromptTemplate.from_template(template)
                 chain = prompt | llm
                 
-                # Eksekusi AI
-                response = chain.invoke({
+                # Eksekusi
+                result = chain.invoke({
                     "bahasa_tujuan": target_lang,
                     "gaya": tone,
                     "teks_asal": source_text
                 })
                 
-                # Tampilkan Hasil
-                st.success("Selesai!")
-                st.subheader(f"Hasil ({target_lang}):")
-                st.write(response.content)
-                
+                with col2:
+                    st.success(f"Hasil Terjemahan ({target_lang}):")
+                    st.info(result.content)
+                    
         except Exception as e:
-            st.error(f"Terjadi kesalahan: {e}")
+            st.error(f"Terjadi kendala teknis: {str(e)}")
 
 st.divider()
-st.caption("Dibuat dengan ❤️ menggunakan Streamlit & Gemini AI")
+st.caption("Tips: Gunakan Gemini 2.0 Flash untuk kecepatan kilat, atau 1.5 Pro untuk dokumen panjang.")
